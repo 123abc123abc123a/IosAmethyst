@@ -38,7 +38,7 @@ jobs:
 
       - name: Get gl4es latest commit hash
         id: gl4es-sha
-        run: echo "::set-output name=sha::$(echo $(git ls-remote https://github.com/PojavLauncherTeam/gl4es-114-extra refs/heads/master | grep -io '^\S*'))"
+        run: echo "sha=$(git ls-remote https://github.com/PojavLauncherTeam/gl4es-114-extra refs/heads/master | grep -io '^\S*')" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Cache gl4es
@@ -54,7 +54,7 @@ jobs:
         uses: actions/checkout@main
         with:
           repository: 'PojavLauncherTeam/gl4es-114-extra'
-          path: 'gl4es'
+          path: 'all-gl4es'
 
       - name: Build gl4es
         if: false && steps.gl4es-cache.outputs.cache-hit != 'true'
@@ -82,30 +82,35 @@ jobs:
       - name: Set up Java 8
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu' # A highly reliable OpenJDK distribution
+          distribution: 'zulu'
           java-version: '8'
 
       - name: Build for ${{ matrix.platform_name }}
         run: |
-                brew install make
-                export PATH=/opt/homebrew/bin:$PATH
-                
-                # Forcefully look up and set the exact Java 8 path on macOS
-                export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
-                export PATH=$JAVA_HOME/bin:$PATH
-                
-                export SLIMMED=1
-                if [ "${{ matrix.platform_name }}" == "ios" ]; then
-                  # Build ipa and tipa for iOS
-                  gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
-                  gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
-                elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-                  # Build tipa only for tvOS
-                  gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
-                else
-                  # Build ipa only for everything else
-                  gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
-                fi
+          # 1. Install GNU Make via Homebrew
+          brew install make
+          
+          # 2. Expose Homebrew binaries to the path environment
+          export PATH=/opt/homebrew/bin:$PATH
+          
+          # 3. Direct path binding to the freshly pulled Java 8 SDK
+          export JAVA_HOME="$JAVA_HOME_8_arm64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          
+          # 4. Initialize build parameters
+          export SLIMMED=1
+          if [ "${{ matrix.platform_name }}" == "ios" ]; then
+            # Build ipa and tipa for iOS
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
+          elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
+            # Build tipa only for tvOS
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
+          else
+            # Build ipa only for everything else
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
+          fi
+
       - name: Upload regular ipa
         uses: actions/upload-artifact@main
         with:
