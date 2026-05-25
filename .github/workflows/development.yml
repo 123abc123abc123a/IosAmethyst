@@ -89,6 +89,10 @@ jobs:
         run: |
           brew install make
           export PATH=/opt/homebrew/bin:$PATH
+
+          export JAVA_HOME=$JAVA_HOME_8_arm64
+          export PATH=$JAVA_HOME/bin:$PATH
+          
           export SLIMMED=1
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
             # Build ipa and tipa for iOS
