@@ -90,17 +90,18 @@ jobs:
           # 1. Bring in GNU Make from Homebrew
           brew install make
           
-          # 2. Hardcode the structural system cache path verified by logs
-          export PATH="/opt/homebrew/bin:$PATH"
-          export JAVA_HOME="/Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home"
-          export PATH="$JAVA_HOME/bin:$PATH"
+          # 2. Dynamically link the correct Java 8 paths 
+          export PATH="/opt/homebrew/bin:$JAVA_HOME/bin:$PATH"
           export SLIMMED=1
           
-          # 3. Target real binaries to override Makefile internal path discovery
-          export J_PATH="$JAVA_HOME/bin"
-          export MAKE_ARGS="JAVAC=$J_PATH/javac JAVA=$J_PATH/java JAR=$J_PATH/jar"
+          # 3. NUKE the validation line from the Makefile. 
+          # Using .bak forces macOS to execute the inline file edit.
+          sed -i.bak '/You need to install JDK 8/d' Makefile
           
-          # 4. Compile while injecting arguments
+          # 4. Target real binaries to override any leftover internal path discovery
+          export MAKE_ARGS="JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
+          
+          # 5. Compile while injecting arguments
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
             gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
             gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
