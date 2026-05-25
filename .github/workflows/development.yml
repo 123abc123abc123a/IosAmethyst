@@ -87,20 +87,27 @@ jobs:
 
       - name: Build for ${{ matrix.platform_name }}
         run: |
-          # Set up paths for Homebrew and Java 8 natively 
+          # 1. Bring in GNU Make from Homebrew
+          brew install make
+          
+          # 2. Configure path structures 
           export PATH="/opt/homebrew/bin:$PATH"
           export JAVA_HOME="$JAVA_HOME_8_arm64"
           export PATH="$JAVA_HOME/bin:$PATH"
           export SLIMMED=1
           
-          # Force the native build tool configuration to run cleanly
+          # 3. Create absolute binary path rules to force feed the Makefile
+          export J_PATH="$JAVA_HOME_8_arm64/bin"
+          export MAKE_ARGS="JAVAC=$J_PATH/javac JAVA=$J_PATH/java JAR=$J_PATH/jar"
+          
+          # 4. Compile while applying the arguments
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           else
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
           fi
 
       - name: Upload regular ipa
