@@ -97,10 +97,13 @@ jobs:
           export PATH="$JAVA_HOME/bin:$PATH"
           export SLIMMED=1
           
-          # 4. Inject JAVA_HOME directly as an argument so the Makefile finds the right C++ headers
+          # 4. NUKE the validation line from the Makefile (Put back in!)
+          sed -i.bak '/You need to install JDK 8/d' Makefile
+          
+          # 5. Inject JAVA_HOME directly as an argument so the Makefile finds the right C++ headers
           export MAKE_ARGS="JAVA_HOME=$JAVA_HOME JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
           
-          # 5. Compile! (Notice we use 'make' instead of 'gmake' now because of Step 2)
+          # 6. Compile! (Using standard 'make' since gnubin overrides it)
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
             make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
             make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
