@@ -87,8 +87,8 @@ jobs:
 
       - name: Build for ${{ matrix.platform_name }}
         run: |
-          # 1. Bring in GNU Make from Homebrew
-          brew install make
+          # 1. Bring in GNU Make AND ldid from Homebrew
+          brew install make ldid
           
           # 2. Dynamically link the correct Java 8 paths 
           export PATH="/opt/homebrew/bin:$JAVA_HOME/bin:$PATH"
