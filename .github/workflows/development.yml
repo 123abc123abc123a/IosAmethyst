@@ -43,21 +43,21 @@ jobs:
 
       - name: Cache gl4es
         uses: actions/cache@main
-        if: false # use gl4es 1.1.5
+        if: false
         id: gl4es-cache
         with:
           path: gl4es/libs
           key: gl4es-holy-ios-shared-2-${{ steps.gl4es-sha.outputs.sha }}
 
       - name: Get gl4es
-        if: false && steps.gl4es-cache.outputs.cache-hit != 'true'
+        if: false
         uses: actions/checkout@main
         with:
           repository: 'PojavLauncherTeam/gl4es-114-extra'
           path: 'all-gl4es'
 
       - name: Build gl4es
-        if: false && steps.gl4es-cache.outputs.cache-hit != 'true'
+        if: false
         continue-on-error: true
         run: |
           cd gl4es
@@ -72,7 +72,7 @@ jobs:
           cp -R lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
           
       - name: Push gl4es
-        if: false && github.event != 'pull_request' && github.ref_name == 'main' && steps.gl4es-cache.outputs.cache-hit != 'true'
+        if: false
         continue-on-error: true
         run: |
           git add Natives/resources/Frameworks/libgl4es_114.dylib
@@ -87,28 +87,20 @@ jobs:
 
       - name: Build for ${{ matrix.platform_name }}
         run: |
-          # 1. Install GNU Make via Homebrew
-          brew install make
-          
-          # 2. Expose Homebrew binaries to the path environment
-          export PATH=/opt/homebrew/bin:$PATH
-          
-          # 3. Direct path binding to the freshly pulled Java 8 SDK
+          # Set up paths for Homebrew and Java 8 natively 
+          export PATH="/opt/homebrew/bin:$PATH"
           export JAVA_HOME="$JAVA_HOME_8_arm64"
           export PATH="$JAVA_HOME/bin:$PATH"
-          
-          # 4. Initialize build parameters
           export SLIMMED=1
+          
+          # Force the native build tool configuration to run cleanly
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            # Build ipa and tipa for iOS
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
           elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            # Build tipa only for tvOS
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
           else
-            # Build ipa only for everything else
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
           fi
 
       - name: Upload regular ipa
