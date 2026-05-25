@@ -87,25 +87,25 @@ jobs:
 
       - name: Build for ${{ matrix.platform_name }}
         run: |
-          brew install make
-          export PATH=/opt/homebrew/bin:$PATH
-
-          export JAVA_HOME=$JAVA_HOME_8_arm64
-          export PATH=$JAVA_HOME/bin:$PATH
-          
-          export SLIMMED=1
-          if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            # Build ipa and tipa for iOS
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
-          elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            # Build tipa only for tvOS
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
-          else
-            # Build ipa only for everything else
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
-          fi
-
+                brew install make
+                export PATH=/opt/homebrew/bin:$PATH
+                
+                # Forcefully look up and set the exact Java 8 path on macOS
+                export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
+                export PATH=$JAVA_HOME/bin:$PATH
+                
+                export SLIMMED=1
+                if [ "${{ matrix.platform_name }}" == "ios" ]; then
+                  # Build ipa and tipa for iOS
+                  gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
+                  gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
+                elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
+                  # Build tipa only for tvOS
+                  gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1
+                else
+                  # Build ipa only for everything else
+                  gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }}
+                fi
       - name: Upload regular ipa
         uses: actions/upload-artifact@main
         with:
