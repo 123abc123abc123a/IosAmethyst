@@ -90,27 +90,27 @@ jobs:
           # 1. Bring in GNU Make, ldid, dpkg, and jq
           brew install make ldid dpkg jq
           
-          # 2. THE MAGIC BULLET: Force Apple to use GNU Make natively for ALL sub-modules
+          # 2. Force Apple to use GNU Make natively
           export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
           
           # 3. Expose the downloaded Zulu JDK 8 path
           export PATH="$JAVA_HOME/bin:$PATH"
           export SLIMMED=1
           
-          # 4. NUKE the validation line from the Makefile (Put back in!)
+          # 4. NUKE the validation line from the Makefile
           sed -i.bak '/You need to install JDK 8/d' Makefile
           
-          # 5. Inject JAVA_HOME directly as an argument so the Makefile finds the right C++ headers
+          # 5. Inject JAVA_HOME directly as an argument
           export MAKE_ARGS="JAVA_HOME=$JAVA_HOME JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
           
-          # 6. Compile! (Using standard 'make' since gnubin overrides it)
+          # 6. Compile! (Notice the missing -j flags to force single-thread diagnostics)
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           else
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
           fi
 
       - name: Upload regular ipa
