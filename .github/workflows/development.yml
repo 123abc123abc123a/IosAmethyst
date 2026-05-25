@@ -87,10 +87,10 @@ jobs:
 
       - name: Build for ${{ matrix.platform_name }}
         run: |
-          # 1. Bring in GNU Make AND ldid from Homebrew
-          brew install make ldid
+          # 1. Bring in GNU Make, ldid, and dpkg/jq (Strictly required for IPA packaging)
+          brew install make ldid dpkg jq
           
-          # 2. Dynamically link the correct Java 8 paths 
+          # 2. Dynamically link the Java 8 paths using the Action's built-in variable
           export PATH="/opt/homebrew/bin:$JAVA_HOME/bin:$PATH"
           export SLIMMED=1
           
@@ -98,7 +98,7 @@ jobs:
           # Using .bak forces macOS to execute the inline file edit.
           sed -i.bak '/You need to install JDK 8/d' Makefile
           
-          # 4. Target real binaries to override any leftover internal path discovery
+          # 4. Target real binaries to override internal path discovery
           export MAKE_ARGS="JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
           
           # 5. Compile while injecting arguments
