@@ -81,6 +81,7 @@ jobs:
 
       - name: Build for ${{ matrix.platform_name }}
         run: |
+          brew install make
           export PATH=/opt/homebrew/bin:$PATH
           export SLIMMED=1
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
