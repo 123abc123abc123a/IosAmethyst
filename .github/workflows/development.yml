@@ -31,7 +31,7 @@ jobs:
           ls -lah ./
           
       - name: Checkout repository
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
 
       - name: Checkout repository submodules
         run: git submodule update --init --recursive
@@ -42,20 +42,19 @@ jobs:
         shell: bash
 
       - name: Cache gl4es
-        uses: actions/cache@main
+        uses: actions/cache@v4
         id: gl4es-cache
         with:
           path: gl4es/libs
           key: gl4es-holy-ios-shared-2-${{ steps.gl4es-sha.outputs.sha }}
 
       - name: Get gl4es
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           repository: 'PojavLauncherTeam/gl4es-114-extra'
-          path: 'all-gl4es'
+          path: 'gl4es'
 
       - name: Build gl4es
-        continue-on-error: true
         run: |
           cd gl4es
           git config user.email "github-actions@users.noreply.github.com"
@@ -66,6 +65,9 @@ jobs:
             -DNOX11=ON -DNOEGL=OFF -DSTATICLIB=OFF -DPLATFORM=OS64 \
             -DCMAKE_C_FLAGS=-Wno-error=implicit-function-declaration
           cmake --build build --config RelWithDebInfo --target GL
+          
+          # Guarantee the destination folder exists before attempting to copy
+          mkdir -p ../Natives/resources/Frameworks/
           cp -R lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
           
       - name: Push gl4es
@@ -84,69 +86,61 @@ jobs:
 
       - name: Build for ${{ matrix.platform_name }}
         run: |
-          # 1. Bring in GNU Make, ldid, dpkg, and jq
           brew install make ldid dpkg jq
-          
-          # 2. Force Apple to use GNU Make natively
           export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
           
-          # 3. Create a PATH trap to force the system to hit Java 8 before Apple's wrappers
           mkdir -p $GITHUB_WORKSPACE/javatrap
           ln -sf "$JAVA_HOME/bin/javac" $GITHUB_WORKSPACE/javatrap/javac
           ln -sf "$JAVA_HOME/bin/java" $GITHUB_WORKSPACE/javatrap/java
           ln -sf "$JAVA_HOME/bin/jar" $GITHUB_WORKSPACE/javatrap/jar
           export PATH="$GITHUB_WORKSPACE/javatrap:$PATH"
           
-          # 4. NUKE Apple's internal java_home lookup in all Makefiles to prevent override
           find . -type f -name "Makefile" -exec sed -i.bak "s|/usr/libexec/java_home -v 1.8|echo $JAVA_HOME|g" {} +
           find . -type f -name "Makefile" -exec sed -i.bak "s|/usr/libexec/java_home|echo $JAVA_HOME|g" {} +
           
-          # 5. NUKE the validation line from the Makefile
           sed -i.bak '/You need to install JDK 8/d' Makefile
           
-          # 6. Preemptively delete desktop Mac UI code that iOS doesn't need and crashes the compiler
           find . -name "PojavLauncher.java" -exec sed -i.bak '/com.apple.eawt/d' {} +
           find . -name "PojavLauncher.java" -exec sed -i.bak '/sun.font.FontUtilities/d' {} +
           
-          # 7. Inject JAVA_HOME directly as an argument
           export MAKE_ARGS="JAVA_HOME=$JAVA_HOME JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
           
-          # 8. Compile! (Parallel threads restored!)
+          # Parallel threads (-j) removed to force a linear build for debugging.
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           else
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
           fi
 
       - name: Upload regular ipa
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}.ipa
           path: artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}.ipa
 
       - name: Upload regular tipa
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}-trollstore.tipa
           path: artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}-trollstore.tipa
 
       - name: Upload slimmed ipa
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}.ipa
           path: artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}.ipa
 
       - name: Upload slimmed tipa
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}-trollstore.tipa
           path: artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}-trollstore.tipa
 
       - name: Upload PojavLauncher.dSYM
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         if: matrix.platform_name == 'ios'
         with:
           name: AngelAuraAmethyst.dSYM
