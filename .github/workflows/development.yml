@@ -66,7 +66,7 @@ jobs:
           export PATH=/opt/procursus/bin:$PATH
           wget https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
           
-          # Added -DCMAKE_POLICY_VERSION_MINIMUM=3.5 to handle strict modern CMake runners
+          # Added flags to bypass CMake's strict compiler tests and fix Xcode 15 errors
           cmake -B build -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake -DDEFAULT_ES=2 \
             -DNOX11=ON -DNOEGL=OFF -DSTATICLIB=OFF -DPLATFORM=OS64 \
             -DENABLE_BITCODE=OFF \
@@ -115,13 +115,14 @@ jobs:
           
           export MAKE_ARGS="JAVA_HOME=$JAVA_HOME JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
           
+          # Parallel threads (-j) removed to force the true error to the bottom of the log
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           else
-            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
           fi
 
       - name: Upload regular ipa
