@@ -110,10 +110,12 @@ jobs:
           
           sed -i.bak '/You need to install JDK 8/d' Makefile
           
-          # Inject dummy stub classes across all potential source roots with absolute baseline indentation
-          for ROOT in "." "src" "src/main/java"; do
-            mkdir -p $ROOT/com/apple/eawt
-            cat << 'EOF' > $ROOT/com/apple/eawt/Application.java
+          # Dynamically find the Java source root and inject UI stubs directly beside the main packages
+          for PL_FILE in $(find . -name "PojavLauncher.java"); do
+            ROOT=$(dirname "$PL_FILE")/../../../..
+            
+            mkdir -p "$ROOT/com/apple/eawt"
+            cat << 'EOF' > "$ROOT/com/apple/eawt/Application.java"
           package com.apple.eawt;
           public class Application {
               public static Application getApplication() { return new Application(); }
@@ -124,8 +126,8 @@ jobs:
           }
           EOF
             
-            mkdir -p $ROOT/sun/font
-            cat << 'EOF' > $ROOT/sun/font/FontUtilities.java
+            mkdir -p "$ROOT/sun/font"
+            cat << 'EOF' > "$ROOT/sun/font/FontUtilities.java"
           package sun.font;
           public class FontUtilities {
               public static boolean isWindows = false;
@@ -138,14 +140,14 @@ jobs:
           
           export MAKE_ARGS="JAVA_HOME=$JAVA_HOME JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
           
-          # Parallel threads (-j) removed temporarily to catch the hidden compilation bug
+          # Parallel threads (-j) restored as the Java root is now fully resolved!
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
-            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           else
-            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
           fi
 
       - name: Upload regular ipa
