@@ -110,42 +110,41 @@ jobs:
           
           sed -i.bak '/You need to install JDK 8/d' Makefile
           
-          # Inject dummy stub classes across all possible source roots to guarantee discovery
+          # Inject dummy stub classes across all potential source roots with absolute baseline indentation
           for ROOT in "." "src" "src/main/java"; do
             mkdir -p $ROOT/com/apple/eawt
             cat << 'EOF' > $ROOT/com/apple/eawt/Application.java
-            package com.apple.eawt;
-            public class Application {
-                public static Application getApplication() { return new Application(); }
-                public void setDockIconImage(java.awt.Image image) {}
-                public void setDockIconBadge(String badge) {}
-                public void requestToggleFullScreen(java.awt.Window window) {}
-                public void requestForeground(boolean allWindows) {}
-            }
-            EOF
+          package com.apple.eawt;
+          public class Application {
+              public static Application getApplication() { return new Application(); }
+              public void setDockIconImage(java.awt.Image image) {}
+              public void setDockIconBadge(String badge) {}
+              public void requestToggleFullScreen(java.awt.Window window) {}
+              public void requestForeground(boolean allWindows) {}
+          }
+          EOF
             
             mkdir -p $ROOT/sun/font
             cat << 'EOF' > $ROOT/sun/font/FontUtilities.java
-            package sun.font;
-            public class FontUtilities {
-                public static boolean isWindows = false;
-                public static boolean isMacOSX = false;
-                public static boolean isLinux = false;
-                public static boolean isSolaris = false;
-            }
-            EOF
+          package sun.font;
+          public class FontUtilities {
+              public static boolean isWindows = false;
+              public static boolean isMacOSX = false;
+              public static boolean isLinux = false;
+              public static boolean isSolaris = false;
+          }
+          EOF
           done
           
           export MAKE_ARGS="JAVA_HOME=$JAVA_HOME JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
           
-          # Parallel execution completely disabled to preserve error visibility
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
-            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            make dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
           else
-            make dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
+            make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
           fi
 
       - name: Upload regular ipa
