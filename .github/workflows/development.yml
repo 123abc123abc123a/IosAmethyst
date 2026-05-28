@@ -19,7 +19,8 @@ jobs:
           - platform: 2
             platform_name: ios
     
-    runs-on: macos-14
+    # Switched to macos-13 to use Xcode 14, bypassing Xcode 15 strict linker errors
+    runs-on: macos-13
     steps:
       - name: Remove work folders
         run: |
@@ -57,21 +58,15 @@ jobs:
       - name: Build gl4es
         run: |
           cd gl4es
-          
-          # Forcefully strip the Linux-only linker flag from the CMake configuration
-          find . -type f -name "CMakeLists.txt" -exec sed -i.bak 's/-Wl,-Bsymbolic//g' {} +
-          
           git config user.email "github-actions@users.noreply.github.com"
           git config user.name "github-actions"
           export PATH=/opt/procursus/bin:$PATH
           wget https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
           
-          # Added flags to bypass CMake's strict compiler tests and fix Xcode 15 errors
+          # Kept -DENABLE_BITCODE=OFF and implicit-function-declaration to maintain iOS compatibility
           cmake -B build -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake -DDEFAULT_ES=2 \
             -DNOX11=ON -DNOEGL=OFF -DSTATICLIB=OFF -DPLATFORM=OS64 \
             -DENABLE_BITCODE=OFF \
-            -DCMAKE_C_COMPILER_WORKS=1 \
-            -DCMAKE_CXX_COMPILER_WORKS=1 \
             -DCMAKE_C_FLAGS=-Wno-error=implicit-function-declaration
           cmake --build build --config RelWithDebInfo --target GL
           
@@ -114,7 +109,6 @@ jobs:
           
           export MAKE_ARGS="JAVA_HOME=$JAVA_HOME JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
           
-          # Parallel threads (-j) restored
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
             make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
             make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
