@@ -110,12 +110,10 @@ jobs:
           
           sed -i.bak '/You need to install JDK 8/d' Makefile
           
-          # Dynamically find the Java source root and inject UI stubs directly beside the main packages
-          for PL_FILE in $(find . -name "PojavLauncher.java"); do
-            ROOT=$(dirname "$PL_FILE")/../../../..
-            
-            mkdir -p "$ROOT/com/apple/eawt"
-            cat << 'EOF' > "$ROOT/com/apple/eawt/Application.java"
+          # Preemptively build sun.jar with macOS UI stubs to bypass the "No rule to make target" error
+          echo "Generating sun.jar stubs..."
+          mkdir -p stub_src/com/apple/eawt
+          cat << 'EOF' > stub_src/com/apple/eawt/Application.java
           package com.apple.eawt;
           public class Application {
               public static Application getApplication() { return new Application(); }
@@ -125,9 +123,9 @@ jobs:
               public void requestForeground(boolean allWindows) {}
           }
           EOF
-            
-            mkdir -p "$ROOT/sun/font"
-            cat << 'EOF' > "$ROOT/sun/font/FontUtilities.java"
+          
+          mkdir -p stub_src/sun/font
+          cat << 'EOF' > stub_src/sun/font/FontUtilities.java
           package sun.font;
           public class FontUtilities {
               public static boolean isWindows = false;
@@ -136,11 +134,17 @@ jobs:
               public static boolean isSolaris = false;
           }
           EOF
-          done
+          
+          mkdir -p stub_classes
+          "$JAVA_HOME/bin/javac" -source 1.8 -target 1.8 -d stub_classes stub_src/com/apple/eawt/Application.java stub_src/sun/font/FontUtilities.java
+          
+          # Place the compiled sun.jar exactly where the Makefile expects it
+          mkdir -p JavaApp/build
+          "$JAVA_HOME/bin/jar" cvf JavaApp/build/sun.jar -C stub_classes .
           
           export MAKE_ARGS="JAVA_HOME=$JAVA_HOME JAVAC=$JAVA_HOME/bin/javac JAVA=$JAVA_HOME/bin/java JAR=$JAVA_HOME/bin/jar JAVA_HOME_BIN=$JAVA_HOME/bin"
           
-          # Parallel threads (-j) restored as the Java root is now fully resolved!
+          # Parallel threads (-j) safely restored!
           if [ "${{ matrix.platform_name }}" == "ios" ]; then
             make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} $MAKE_ARGS
             make -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 $MAKE_ARGS
